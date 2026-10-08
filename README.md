@@ -4,7 +4,7 @@ A playable browser fan game inspired by the side-scrolling action of **Hercules 
 
 ## Play
 
-Open the deployed game URL in a modern desktop or mobile browser. No installation or paid services are required. All ten chapters are available through **Choose a chapter**. Your progress is saved in the current browser.
+[**Play online**](https://hercules-labors-1997.cometglade1.chatgpt.site) in a modern desktop or mobile browser. No installation or paid services are required. All ten chapters are available through **Choose a chapter**. Your progress is saved in the current browser.
 
 | Action | Keyboard | Gamepad |
 | --- | --- | --- |

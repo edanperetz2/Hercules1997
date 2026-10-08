@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c182b">
+  <meta name="description" content="An original browser fan game inspired by Hercules (1997). Run, jump, battle mythical monsters, and become a hero.">
+  <title>Hercules · A Hero’s Journey</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c182b'/%3E%3Cpath d='M18 3 8 18h8l-2 11 11-16h-8Z' fill='%23f5bf55'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="arcade">
+    <header class="masthead">
+      <a class="wordmark" href="./" aria-label="Hercules home"><span class="crest">ϟ</span> HERCULES <span class="wordmark-sub">A HERO’S JOURNEY</span></a>
+      <div class="top-actions"><button id="helpButton" class="quiet-button" title="How to play">Controls</button><button id="soundButton" class="icon-button" aria-label="Turn sound on" aria-pressed="false">♪<span id="soundLabel">OFF</span></button><button id="fullscreenButton" class="icon-button" aria-label="Enter fullscreen">⛶</button></div>
+    </header>
+
+    <section id="gameShell" class="game-shell" aria-label="Hercules game">
+      <canvas id="game" width="1280" height="720" tabindex="0" aria-label="Hercules platform game. Move with arrows or A D, jump with space, attack with J, use magic with K, pause with Escape."></canvas>
+      <div id="hud" class="hud hidden" aria-hidden="true">
+        <div class="hero-status"><div class="hero-name">HERCULES <span id="lives">× 3</span></div><div class="health-track"><div id="healthFill"></div></div><div class="magic-track"><div id="magicFill"></div></div></div>
+        <div class="chapter-status"><div id="chapterName">THE TRAINING GROUNDS</div><span id="objective">Follow the road to the temple</span></div>
+        <div class="treasure-status"><div class="coin-status"><span class="coin-icon">ϟ</span><span id="coinCount">0</span></div><div class="letters" id="letters">HERCULES</div><div id="vaseCount">AMPHORAE 0 / 4</div></div>
+        <button id="pauseButton" class="hud-pause" aria-label="Pause game">Ⅱ</button>
+      </div>
+      <div id="bossHud" class="boss-hud hidden"><span id="bossName">THE HYDRA</span><div><i id="bossFill"></i></div><small id="bossHint">Dodge its attack. Strike when it rests.</small></div>
+      <div id="toast" class="toast hidden" role="status"></div>
+
+      <div id="menu" class="screen menu-screen">
+        <div class="menu-kicker"><span></span> A GREEK ADVENTURE <span></span></div>
+        <h1>HERCULES</h1>
+        <div class="title-sub"><span></span> A HERO’S JOURNEY <span></span></div>
+        <p class="menu-intro">From mortal to legend.</p>
+        <div class="menu-play"><button id="startButton" class="gold-button">Begin adventure <span class="button-key">ENTER</span></button><button id="continueButton" class="outline-button hidden">Continue adventure</button></div>
+        <div class="menu-options"><label>DIFFICULTY <select id="difficulty"><option value="beginner">Beginner</option><option value="hero" selected>Hero</option><option value="herculean">Herculean</option></select></label><button id="chaptersButton" class="text-button">Choose a chapter</button></div>
+        <div id="loading" class="loading">Preparing the arena…</div>
+        <p class="menu-controls"><kbd>←</kbd><kbd>→</kbd> Move <b>·</b> <kbd>SPACE</kbd> Jump <b>·</b> <kbd>J</kbd> Sword <b>·</b> <kbd>K</kbd> Gift of the gods</p>
+      </div>
+
+      <div id="pauseScreen" class="screen modal-screen hidden"><div class="panel"><div class="eyebrow">TAKE A BREATH, HERO</div><h2>Paused</h2><p id="pauseChapter"></p><button id="resumeButton" class="gold-button">Return to the adventure</button><button id="restartButton" class="outline-button">Restart chapter</button><button id="menuButton" class="text-button">Back to title</button></div></div>
+      <div id="deathScreen" class="screen modal-screen hidden"><div class="panel"><div class="eyebrow">EVEN HEROES FALL</div><h2 id="deathTitle">Try again.</h2><p id="deathMessage">Your adventure isn't over.</p><button id="retryButton" class="gold-button">Try again</button><button id="deathMenuButton" class="text-button">Back to title</button></div></div>
+      <div id="clearScreen" class="screen modal-screen hidden"><div class="panel clear-panel"><div class="eyebrow" id="clearEyebrow">LABOR COMPLETE</div><h2 id="clearTitle">A hero in the making.</h2><p id="clearCopy"></p><div class="results"><div><span id="resultCoins">0</span><small>GOLD</small></div><div><span id="resultLetters">0 / 8</span><small>LETTERS</small></div><div><span id="resultVases">0 / 4</span><small>AMPHORAE</small></div></div><button id="nextButton" class="gold-button">Next chapter</button><button id="clearMenuButton" class="text-button">Back to title</button></div></div>
+      <div id="chaptersScreen" class="screen modal-screen hidden"><div class="panel chapter-panel"><div class="panel-top"><div><div class="eyebrow">YOUR JOURNEY</div><h2>Choose a chapter.</h2></div><button class="close-button" id="chaptersClose" aria-label="Close chapters">×</button></div><div id="chapterList" class="chapter-list"></div></div></div>
+      <div id="helpScreen" class="screen modal-screen hidden"><div class="panel help-panel"><div class="panel-top"><div><div class="eyebrow">RULE NUMBER ONE</div><h2>Concentrate.</h2></div><button class="close-button" id="helpClose" aria-label="Close controls">×</button></div><div class="control-grid"><span>Move</span><div><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd></div><span>Jump / double jump</span><div><kbd>SPACE</kbd> or <kbd>W</kbd> or <kbd>↑</kbd></div><span>Sword attack</span><div><kbd>J</kbd> or <kbd>X</kbd></div><span>Charged strike</span><div>Hold attack, then release</div><span>Gift of the gods</span><div><kbd>K</kbd> or <kbd>C</kbd></div><span>Ground slam</span><div><kbd>↓</kbd> or <kbd>S</kbd> while airborne</div><span>Pause</span><div><kbd>ESC</kbd> or <kbd>P</kbd></div></div><p class="help-note">Collect gold, eight hidden letters, and four amphorae. Blue crystals refill magic; green nectar restores health. Watch a boss's wind-up, dodge, then strike while it recovers. In rush chapters, keep jumping.</p><p class="save-note">Progress is saved in this browser. Every chapter is also available from the title screen. Gamepad: left stick, A jump, X sword, Y magic.</p><button id="helpDone" class="gold-button">Got it</button></div></div>
+      <div id="touchControls" class="touch-controls hidden"><div class="touch-move"><button data-control="left" aria-label="Move left">◀</button><button data-control="right" aria-label="Move right">▶</button><button data-control="down" aria-label="Ground slam">▼</button></div><div class="touch-action"><button data-control="magic" class="touch-magic" aria-label="Cast magic">ϟ</button><button data-control="attack" aria-label="Sword attack">J</button><button data-control="jump" class="touch-jump" aria-label="Jump">↑</button></div></div>
+    </section>
+    <footer class="game-footer"><span id="footerHint">Ten chapters. One hero.</span><span>Inspired by the 1997 classic <span class="footer-dot">·</span> Original fan game</span></footer>
+    <div id="srStatus" class="sr-only" aria-live="polite"></div>
+  </main>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
