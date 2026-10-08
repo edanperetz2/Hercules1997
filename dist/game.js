@@ -2,6 +2,7 @@ import { World, CHAPTERS, BOSS_NAMES, BOSS_HINTS, VIEW } from './engine.js';
 import { Renderer } from './renderer.js';
 import { AudioEngine } from './audio.js';
 import { ACTIONS, ACTION_LABELS, keyLabel, readPreferences, bindKey, actionMap } from './controls.js';
+import { TouchInput, fitPlayfield, bindTouchControls } from './mobile.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('game'), assets = {}, sound = new AudioEngine();
@@ -14,13 +15,13 @@ let save = null;
 try { const candidate = JSON.parse(localStorage.getItem(SAVE_KEY)); if (candidate && Number.isInteger(candidate.chapter) && candidate.chapter >= 0 && candidate.chapter < CHAPTERS.length) save = candidate; } catch {}
 let completed = new Set(Array.isArray(save?.completed) ? save.completed.filter(n => Number.isInteger(n) && n >= 0 && n < CHAPTERS.length) : []);
 let ready = false, helpReturn = 'menu', toastTimer = 0, hudTimer = 0;
-const keyboard = new Set(), touches = new Set(); let previous = {};
+const keyboard = new Set(), touches = new TouchInput(), pendingEdges = {}; let previous = {};
 const world = new World(handleEvent), renderer = new Renderer(canvas, assets);
 let keyActions = actionMap(controls.keys);
 function hide(id, value = true) { $(id).classList.toggle('hidden', value); }
-function showScreen(id) { for (const s of screens) hide(s, s !== id); hide('hud', world.state === 'menu'); hide('touchControls', world.state !== 'playing' || controls.mode !== 'touch'); }
+function showScreen(id) { for (const s of screens) hide(s, s !== id); hide('hud', world.state === 'menu'); hide('touchControls', world.state !== 'playing' || controls.mode !== 'touch'); syncViewport(); }
 function isTouch() { return matchMedia('(pointer:coarse)').matches || navigator.maxTouchPoints > 0; }
-function clearInput() { keyboard.clear(); touches.clear(); previous = {}; if (world.player) { world.player.holding = false; world.player.charge = 0; } }
+function clearInput() { keyboard.clear(); touches.clear(); previous = {}; for (const edge of Object.keys(pendingEdges)) pendingEdges[edge] = false; for(const b of document.querySelectorAll('[data-control]')) b.classList.toggle('pressed',false); if (world.player) { world.player.holding = false; world.player.charge = 0; } }
 function toast(message, duration = 3.5) { $('toast').textContent = message; hide('toast', false); $('srStatus').textContent = message; toastTimer = duration; }
 function persist(nextChapter = world.chapter) {
   save = { chapter: Math.min(nextChapter, CHAPTERS.length - 1), difficulty: world.difficulty, completed: [...completed], totalGold: world.totalGold, sound: sound.enabled };
@@ -29,7 +30,7 @@ function persist(nextChapter = world.chapter) {
 }
 function start(chapter = 0, difficulty = $('difficulty').value) {
   if (!ready || !controlsAccepted) return;
-  clearInput(); world.start(chapter, difficulty); showScreen(null); persist(); updateHud(); canvas.focus({ preventScroll: true });
+  sound.unlock(); clearInput(); world.start(chapter, difficulty); showScreen(null); persist(); updateHud(); canvas.focus({ preventScroll: true });
 }
 function title() { world.state = 'menu'; clearInput(); hide('bossHud'); hide('toast'); showScreen('menu'); $('footerHint').textContent = 'Ten chapters. One hero.'; hide('continueButton', !save); }
 function pause() { if (world.state === 'playing') world.pause(); else if (world.state === 'paused') world.resume(); }
@@ -110,7 +111,7 @@ function renderBindings() {
     row.append(key); nodes.push(row);
   }
   $('bindings').replaceChildren(...nodes);
-  $('controlsNote').textContent = captureAction ? 'Press the key you want to use. Escape cancels. Duplicate keys are swapped.' : draftControls.mode === 'gamepad' ? 'Connect a controller and press any button. Keyboard remains available as a backup.' : draftControls.mode === 'custom' ? 'Select a key to change it. Escape and P are reserved for pause.' : draftControls.mode === 'touch' ? 'Touch buttons stay visible during play. Landscape works best on a phone.' : 'Escape or P pauses the adventure.';
+  $('controlsNote').textContent = captureAction ? 'Press the key you want to use. Escape cancels. Duplicate keys are swapped.' : draftControls.mode === 'gamepad' ? 'Connect a controller and press any button. Keyboard remains available as a backup.' : draftControls.mode === 'custom' ? 'Select a key to change it. Escape and P are reserved for pause.' : draftControls.mode === 'touch' ? 'Use both thumbs: hold a direction, then tap Jump or Sword. Rotate for a larger view.' : 'Escape or P pauses the adventure.';
 }
 function openControls(returnTo = world.state) {
   controlsReturn = returnTo;
@@ -143,8 +144,35 @@ for (const id of ['menuButton','deathMenuButton','clearMenuButton','chaptersClos
 $('nextButton').addEventListener('click', () => { if (world.chapter === CHAPTERS.length - 1) title(); else { const carry = { lives: Math.max(1,world.lives), totalGold: world.totalGold }; clearInput(); world.start(world.chapter + 1, world.difficulty, carry); showScreen(null); persist(); updateHud(); canvas.focus({preventScroll:true}); } });
 $('chaptersButton').addEventListener('click', chapters); $('helpButton').addEventListener('click', () => { if (!controlsAccepted || !$('controlsScreen').classList.contains('hidden')) openControls(controlsReturn); else openHelp(); }); $('helpClose').addEventListener('click', closeHelp); $('helpDone').addEventListener('click', closeHelp);
 $('soundButton').addEventListener('click', () => { sound.enable(!sound.enabled); $('soundLabel').textContent = sound.enabled ? 'ON' : 'OFF'; $('soundButton').setAttribute('aria-label', sound.enabled ? 'Turn sound off' : 'Turn sound on'); $('soundButton').setAttribute('aria-pressed', String(sound.enabled)); if(sound.enabled) sound.effect('checkpoint'); });
-$('fullscreenButton').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else if ($('gameShell').requestFullscreen) await $('gameShell').requestFullscreen(); else toast('Rotate your phone to landscape for a larger view.'); } catch { toast('Fullscreen is unavailable in this browser.'); } });
-document.addEventListener('fullscreenchange', () => $('fullscreenButton').setAttribute('aria-label', document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'));
+async function largerView(exitOnly = false) {
+  const shell=$('gameShell');
+  if(document.fullscreenElement) { try { await document.exitFullscreen(); } catch {} }
+  else if(shell.classList.contains('expanded') || exitOnly) shell.classList.toggle('expanded',false);
+  else { try { if(!shell.requestFullscreen) throw new Error('Use page view'); await shell.requestFullscreen(); } catch { shell.classList.toggle('expanded',true); } }
+  syncViewport();
+}
+function syncViewport() {
+  const viewportHeight=window.visualViewport?.height || window.innerHeight || 720;
+  document.documentElement.style.setProperty('--viewport-height',`${Math.round(viewportHeight)}px`);
+  const mobile=isTouch() && Math.min(window.innerWidth || 1280,window.innerHeight || 720)<=1024;
+  document.body.classList.toggle('mobile-device',mobile);
+  const shell=$('gameShell'), expanded=!!document.fullscreenElement || shell.classList.contains('expanded');
+  const portrait=(window.innerHeight || 720)>(window.innerWidth || 1280), reserve=mobile && portrait && controls.mode==='touch' ? 152 : 0;
+  shell.classList.toggle('portrait-touch',reserve>0);
+  if(mobile || expanded) {
+    const fit=fitPlayfield(shell.clientWidth || window.innerWidth || 1280,shell.clientHeight || viewportHeight-54,reserve);
+    $('playfield').style.width=`${fit.width}px`; $('playfield').style.height=`${fit.height}px`;
+  } else { $('playfield').style.width='';$('playfield').style.height=''; }
+  hide('rotateHint',!mobile || !portrait || world.state!=='playing');
+  hide('exitExpanded',!expanded);
+  $('fullscreenButton').setAttribute('aria-label',expanded?'Exit larger view':'Enter larger view');
+}
+$('fullscreenButton').addEventListener('click',()=>largerView());
+$('exitExpanded').addEventListener('click',()=>largerView(true));
+document.addEventListener('fullscreenchange',syncViewport);
+window.addEventListener('resize',syncViewport);
+window.visualViewport?.addEventListener('resize',syncViewport);
+window.addEventListener('orientationchange',()=>{clearInput();syncViewport();});
 canvas.addEventListener('pointerdown', () => canvas.focus({preventScroll:true}));
 window.addEventListener('keydown', event => {
   if (!$('controlsScreen').classList.contains('hidden')) {
@@ -167,10 +195,16 @@ window.addEventListener('keydown', event => {
 window.addEventListener('keyup', event => { const action = keyActions[event.code]; if (action) keyboard.delete(action); });
 window.addEventListener('blur', () => { clearInput(); if (world.state === 'playing') world.pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && world.state === 'playing') world.pause(); });
-for (const button of document.querySelectorAll('[data-control]')) {
-  button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture(event.pointerId); touches.add(button.dataset.control); });
-  for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, event => { event.preventDefault(); touches.delete(button.dataset.control); });
-}
+bindTouchControls([...document.querySelectorAll('[data-control]')],touches,{onGesture:()=>sound.unlock(),allow:()=>world.state==='playing' && controls.mode==='touch',pointerEvents:typeof window.PointerEvent!=='undefined'});
+for(const type of ['pointerup','pointercancel']) window.addEventListener(type,event=>{
+  touches.release(event.pointerId);for(const b of document.querySelectorAll('[data-control]'))b.classList.toggle('pressed',touches.has(b.dataset.control));
+});
+if(typeof window.PointerEvent==='undefined') for(const type of ['touchend','touchcancel']) window.addEventListener(type,event=>{
+  for(const t of event.changedTouches || []) touches.release(t.identifier);
+  for(const b of document.querySelectorAll('[data-control]'))b.classList.toggle('pressed',touches.has(b.dataset.control));
+},{passive:true});
+for(const type of ['pointerup','touchend','keydown']) document.addEventListener(type,()=>sound.unlock(),{passive:true});
+window.addEventListener('pagehide',()=>{clearInput();if(world.state==='playing')world.pause();});
 let lastPadPause = false;
 function readInput() {
   const pad = controls.mode === 'gamepad' ? Array.from(navigator.getGamepads?.() || []).find(p => p?.connected) : null, a = {};
@@ -184,7 +218,6 @@ function readInput() {
   previous = { ...a }; return a;
 }
 let last = performance.now(), acc = 0;
-const pendingEdges = {};
 function frame(now) {
   const dt = Math.min((now - last) / 1000, .05); last = now; acc += dt;
   const input = readInput();
