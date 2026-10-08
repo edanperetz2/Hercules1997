@@ -15,7 +15,13 @@ A playable browser fan game inspired by the side-scrolling action of **Hercules 
 | Ground slam | S in the air | Down | Stick / D-pad down |
 | Pause | Escape / P | Escape / P | Start / Options |
 
-The opening screen also offers **Custom keys**, **Touch**, and **Gamepad**. Custom bindings swap duplicate keys automatically. Touch mode keeps the on-screen buttons visible on any device; gamepad mode keeps WASD as a keyboard backup. Change layouts through **Controls → Change controls**. Sound is optional; toggle the musical note at the top. Use fullscreen or landscape orientation for a larger view.
+The opening screen also offers **Custom keys**, **Touch**, and **Gamepad**. Custom bindings swap duplicate keys automatically. Touch mode keeps the on-screen buttons visible on any device; gamepad mode keeps WASD as a keyboard backup. Change layouts through **Controls → Change controls**. Sound is optional; toggle the musical note at the top.
+
+### iOS and Android
+
+Open the public game link in Safari on iPhone/iPad or Chrome on Android. No app installation or account is required. Touch is preselected for new visitors on phones. Hold a direction with one thumb and tap Jump, Sword, or Magic with the other; jump twice for a double jump and hold Sword to charge. Both portrait and landscape work, with the original 16:9 scene preserved. Portrait controls sit below the scene; landscape gives a larger playfield. The larger-view button uses browser fullscreen when available and a page-filling view otherwise. Tap Exit to return.
+
+Controls support simultaneous fingers, cancellation, and a Touch Events fallback. Changing apps pauses the game and clears held buttons. Safe-area spacing keeps the controls away from notches and the home indicator. Sound is enabled by an explicit tap and resumes on a later gesture after interruption. Mobile viewport and input tests use simulated devices; physical iOS/Android devices were not available for testing.
 
 The forest edition uses a dense green grove, grassy ledges, wooden training targets, and silver cloud HUD frames based on the supplied visual reference. Hercules wears a short orange-brown tunic and blue cape. An articulated rig animates alternating legs, rising/apex/falling jumps, landing, sword wind-up/contact/recovery, charged strikes, magic, recoil, and victory; the head reuses the generated portrait artwork.
 
@@ -44,7 +50,7 @@ python3 -m http.server 8000 --directory dist
 
 Then open `http://localhost:8000`. The game has no runtime JavaScript dependencies, build step, backend, or API keys. The optional Google Fonts stylesheet has local serif/sans-serif fallbacks.
 
-`dist/engine.js` contains deterministic gameplay, `dist/renderer.js` draws the canvas, `dist/hero-rig.js` animates the hero, `dist/animation.js` chooses action poses, `dist/controls.js` validates bindings, `dist/audio.js` synthesizes sound, and `dist/game.js` handles browser controls, menus, and local progress. Artwork lives in `dist/assets/`.
+`dist/engine.js` contains deterministic gameplay, `dist/renderer.js` draws the canvas, `dist/hero-rig.js` animates the hero, `dist/animation.js` chooses action poses, `dist/controls.js` validates bindings, `dist/mobile.js` handles touch pointers and scene sizing, `dist/audio.js` synthesizes sound, and `dist/game.js` handles browser controls, menus, and local progress. Artwork lives in `dist/assets/`.
 
 The `dist/` directory can also be hosted by GitHub Pages or another static host. `.openai/hosting.json` is the existing Sites deployment identity; retain it when editing this hosted Site.
 
