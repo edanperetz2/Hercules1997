@@ -1,9 +1,10 @@
 // Original synthesized score and effects. No recordings from the commercial game.
 export class AudioEngine {
   constructor() { this.enabled = false; this.ctx = null; this.musicAt = 0; this.step = 0; }
-  enable(value) { this.enabled = value; if (value && !this.ctx) { const Audio = window.AudioContext || window.webkitAudioContext; if (Audio) this.ctx = new Audio(); } if (value && this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {}); }
+  enable(value) { this.enabled = value; if (value && !this.ctx) { const Audio = window.AudioContext || window.webkitAudioContext; if (Audio) this.ctx = new Audio(); } this.unlock(); }
+  unlock() { if (this.enabled && this.ctx && this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => {}); }
   tone(freq, duration = .12, type = 'sine', volume = .08, delay = 0, endFreq = null) {
-    if (!this.enabled || !this.ctx) return;
+    if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime + delay, osc = this.ctx.createOscillator(), gain = this.ctx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, now); if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration); gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(volume, now + .008); gain.gain.exponentialRampToValueAtTime(.0001, now + duration); osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + duration + .01);
   }
   effect(type, data = {}) {
@@ -20,7 +21,7 @@ export class AudioEngine {
     else if (type === 'death') [330,277,220,165].forEach((f,i)=>this.tone(f,.3,'triangle',.06,i*.16));
   }
   music(dt, playing, underworld = false) {
-    if (!playing || !this.enabled || !this.ctx) return;
+    if (!playing || !this.enabled || !this.ctx || this.ctx.state !== 'running') return;
     this.musicAt -= dt; if (this.musicAt > 0) return; this.musicAt = .31;
     const melody = underworld ? [0,3,7,10,7,3,2,7,0,3,5,10,7,5,3,2] : [0,7,12,7,4,9,12,9,5,9,14,12,7,11,14,7];
     const note = melody[this.step % melody.length]; this.tone(196*Math.pow(2,note/12),.4,'triangle',.022);
