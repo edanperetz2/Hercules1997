@@ -4,18 +4,20 @@ A playable browser fan game inspired by the side-scrolling action of **Hercules 
 
 ## Play
 
-[**Play online**](https://hercules-labors-1997.cometglade1.chatgpt.site) in a modern desktop or mobile browser. No installation or paid services are required. All ten chapters are available through **Choose a chapter**. Your progress is saved in the current browser.
+[**Play online**](https://hercules-labors-1997.cometglade1.chatgpt.site) in a modern desktop or mobile browser. No installation or paid services are required. Choose your controls on the opening screen, then begin or continue your adventure. All ten chapters are available through **Choose a chapter**. Your progress and control preferences are saved in the current browser.
 
-| Action | Keyboard | Gamepad |
-| --- | --- | --- |
-| Move | Arrow keys / A, D | Left stick / D-pad |
-| Jump / double jump | Space / W / Up | A |
-| Sword / charged strike | J / X (hold, then release to charge) | X |
-| Magic | K / C | Y |
-| Ground slam | Down / S in the air | D-pad down |
-| Pause | Escape / P | Start |
+| Action | WASD preset | Arrow preset | Gamepad |
+| --- | --- | --- | --- |
+| Move | A, D | Left, Right | Left stick / D-pad |
+| Jump / double jump | Space | Z | A / Cross |
+| Sword / charged strike | J (hold, then release to charge) | X | X / Square |
+| Magic | K | C | Y / Triangle |
+| Ground slam | S in the air | Down | Stick / D-pad down |
+| Pause | Escape / P | Escape / P | Start / Options |
 
-Touch buttons appear on mobile. Sound is optional; toggle the musical note at the top. Use fullscreen or landscape orientation for a larger view.
+The opening screen also offers **Custom keys**, **Touch**, and **Gamepad**. Custom bindings swap duplicate keys automatically. Touch mode keeps the on-screen buttons visible on any device; gamepad mode keeps WASD as a keyboard backup. Change layouts through **Controls → Change controls**. Sound is optional; toggle the musical note at the top. Use fullscreen or landscape orientation for a larger view.
+
+The forest edition uses a dense green grove, grassy ledges, wooden training targets, and silver cloud HUD frames based on the supplied visual reference. Hercules wears a short orange-brown tunic and blue cape. An articulated rig animates alternating legs, rising/apex/falling jumps, landing, sword wind-up/contact/recovery, charged strikes, magic, recoil, and victory; the head reuses the generated portrait artwork.
 
 ## Campaign
 
@@ -42,7 +44,7 @@ python3 -m http.server 8000 --directory dist
 
 Then open `http://localhost:8000`. The game has no runtime JavaScript dependencies, build step, backend, or API keys. The optional Google Fonts stylesheet has local serif/sans-serif fallbacks.
 
-`dist/engine.js` contains deterministic gameplay, `dist/renderer.js` draws the canvas, `dist/audio.js` synthesizes sound, and `dist/game.js` handles browser controls, menus, and local progress. Artwork lives in `dist/assets/`.
+`dist/engine.js` contains deterministic gameplay, `dist/renderer.js` draws the canvas, `dist/hero-rig.js` animates the hero, `dist/animation.js` chooses action poses, `dist/controls.js` validates bindings, `dist/audio.js` synthesizes sound, and `dist/game.js` handles browser controls, menus, and local progress. Artwork lives in `dist/assets/`.
 
 The `dist/` directory can also be hosted by GitHub Pages or another static host. `.openai/hosting.json` is the existing Sites deployment identity; retain it when editing this hosted Site.
 

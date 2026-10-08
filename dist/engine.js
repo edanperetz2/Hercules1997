@@ -41,7 +41,7 @@ export class World {
     this.coins = 0; this.letters = new Set(); this.vases = 0; this.kills = 0;
     this.projectiles = []; this.particles = []; this.popups = []; this.rings = [];
     this.checkpoint = { x: 130, y: VIEW.ground };
-    this.player = { x: 130, y: VIEW.ground, w: 42, h: 100, vx: 0, vy: 0, dir: 1, grounded: true, jumps: 0, coyote: .12, buffer: 0, attack: 0, cooldown: 0, charge: 0, holding: false, hitIds: new Set(), health: this.settings.health, magic: 70, gift: spec.gift, invuln: 1, magicCooldown: 0, slam: false, anim: 0 };
+    this.player = { x: 130, y: VIEW.ground, w: 42, h: 100, vx: 0, vy: 0, dir: 1, grounded: true, jumps: 0, coyote: .12, buffer: 0, attack: 0, cooldown: 0, charge: 0, holding: false, hitIds: new Set(), health: this.settings.health, magic: 70, gift: spec.gift, invuln: 1, magicCooldown: 0, slam: false, anim: 0, landTimer: 0, castTimer: 0, hurtTimer: 0 };
     this.platforms = []; this.hazards = []; this.pickups = []; this.enemies = []; this.crates = []; this.checkpoints = [];
     let end = 0;
     for (const [x, w] of spec.gaps) { this.platforms.push({ x: end, y: VIEW.ground, w: x - end, h: 180, ground: true }); end = x + w; }
@@ -110,7 +110,7 @@ export class World {
   }
   cast() {
     const p = this.player; if (p.magic < 20 || p.magicCooldown > 0 || this.spec.rush) return;
-    p.magic -= 20; p.magicCooldown = .65; this.emit('magic', { gift: p.gift });
+    p.magic -= 20; p.magicCooldown = .65; p.castTimer = .3; this.emit('magic', { gift: p.gift });
     if (p.gift === 'sonic') {
       this.rings.push({ x: p.x, y: p.y - 55, radius: 12, life: .45, color: '#a6eaff' });
       for (const e of [...this.enemies, this.boss].filter(Boolean)) if (Math.abs(e.x - p.x) < 260 && Math.abs(e.y - p.y) < 160) this.hitEnemy(e, 3, true);
@@ -135,7 +135,7 @@ export class World {
   hurt(damage, sourceX = this.player.x + 1) {
     const p = this.player; if (p.invuln > 0 || this.state !== 'playing') return;
     p.health = Math.max(0, p.health - damage * this.settings.damage);
-    p.invuln = 1.1; p.vx = Math.sign(p.x - sourceX || -1) * 280; p.vy = -290; p.grounded = false; this.shake = 9;
+    p.invuln = 1.1; p.hurtTimer = .28; p.vx = Math.sign(p.x - sourceX || -1) * 280; p.vy = -290; p.grounded = false; this.shake = 9;
     this.burst(p.x, p.y - 65, '#ffd0a0', 18); this.emit('hurt');
     if (p.health <= 0) this.die();
   }
@@ -145,7 +145,7 @@ export class World {
   }
   retry() {
     if (this.lives <= 0) { this.lives = this.settings.lives; this.load(); return; }
-    const p = this.player; this.state = 'playing'; Object.assign(p, { x: this.checkpoint.x, y: this.checkpoint.y, vx: 0, vy: 0, health: this.settings.health, magic: Math.max(50, p.magic), invuln: 2.5, attack: 0, cooldown: 0, grounded: true, jumps: 0, slam: false, charge: 0, holding: false });
+    const p = this.player; this.state = 'playing'; Object.assign(p, { x: this.checkpoint.x, y: this.checkpoint.y, vx: 0, vy: 0, health: this.settings.health, magic: Math.max(50, p.magic), invuln: 2.5, attack: 0, cooldown: 0, grounded: true, jumps: 0, slam: false, charge: 0, holding: false, landTimer: 0, castTimer: 0, hurtTimer: 0 });
     this.projectiles = []; this.camera = Math.max(0, p.x - 330); this.shake = 0;
     if (this.spec.rush) this.rushWall = p.x - 550;
     if (this.boss && this.boss.health > 0) Object.assign(this.boss, { phase: 'waiting', active: false, timer: 0, vulnerable: false, x: this.boss.homeX, health: this.boss.maxHealth });
@@ -162,12 +162,13 @@ export class World {
     dt = Math.min(dt, 1 / 30); if (this.state !== 'playing') return;
     this.time += dt;
     const p = this.player, cfg = this.settings;
+    for (const timer of ['landTimer','castTimer','hurtTimer']) p[timer] = Math.max(0, p[timer] - dt);
     p.invuln = Math.max(0, p.invuln - dt); p.attack = Math.max(0, p.attack - dt); p.cooldown = Math.max(0, p.cooldown - dt); p.magicCooldown = Math.max(0, p.magicCooldown - dt); p.buffer = Math.max(0, p.buffer - dt); this.shake = Math.max(0, this.shake - dt * 22);
     if (input.jumpPressed) p.buffer = .15;
     p.coyote = p.grounded ? .12 : Math.max(0, p.coyote - dt);
     if (p.buffer > 0 && (p.grounded || p.coyote > 0 || p.jumps < 2)) {
       const extra = !p.grounded && p.coyote <= 0;
-      p.vy = -710; p.grounded = false; p.jumps = extra ? 2 : 1; p.coyote = 0; p.buffer = 0; p.slam = false;
+      p.vy = -710; p.grounded = false; p.landTimer = 0; p.jumps = extra ? 2 : 1; p.coyote = 0; p.buffer = 0; p.slam = false;
       this.emit('jump', { double: extra }); this.burst(p.x, p.y - 5, extra ? '#b3edff' : '#e6d6a2', 7);
     }
     if (input.jumpReleased && p.vy < -270) p.vy *= .65;
@@ -181,12 +182,12 @@ export class World {
     if (movement) { p.dir = movement; p.vx += (movement * speed - p.vx) * Math.min(1, dt * (p.grounded ? 14 : 8)); }
     else p.vx *= Math.max(0, 1 - dt * (p.grounded ? 13 : 2));
     p.anim += dt * Math.abs(p.vx) / 35;
-    const oldY = p.y;
+    const oldY = p.y, wasGrounded = p.grounded;
     p.x = clamp(p.x + p.vx * dt, p.w / 2, this.spec.width + 50);
     p.vy += 1920 * dt; p.y += p.vy * dt; p.grounded = false;
     for (const plat of this.platforms) {
       if (p.x + p.w / 2 > plat.x && p.x - p.w / 2 < plat.x + plat.w && oldY <= plat.y + 2 && p.y >= plat.y && p.vy >= 0) {
-        const landedHard = p.slam; p.y = plat.y; p.vy = 0; p.grounded = true; p.jumps = 0; p.slam = false;
+        const landedHard = p.slam; if (!wasGrounded && p.vy > 180) p.landTimer = .12; p.y = plat.y; p.vy = 0; p.grounded = true; p.jumps = 0; p.slam = false;
         if (landedHard) { this.shake = 7; this.emit('slam'); this.rings.push({ x: p.x, y: p.y - 3, radius: 10, life: .4, color: '#ffdf95' }); for (const e of [...this.enemies, this.boss].filter(Boolean)) if (Math.abs(e.x - p.x) < 150 && Math.abs(e.y - p.y) < 65) this.hitEnemy(e, 3); }
         break;
       }

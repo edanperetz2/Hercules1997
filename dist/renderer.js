@@ -1,4 +1,6 @@
 import { VIEW, BOSS_NAMES } from './engine.js';
+import { heroFrame } from './animation.js';
+import { drawHero } from './hero-rig.js';
 export class Renderer {
   constructor(canvas, assets) { this.canvas = canvas; this.ctx = canvas.getContext('2d', { alpha: false }); this.assets = assets; this.menuTime = 0; }
   image(name, x, feet, height, dir = -1, options = {}) {
@@ -34,7 +36,7 @@ export class Renderer {
     this.background('grove', 410 + Math.sin(t * .1) * 100, t);
     const g = c.createLinearGradient(0, 525, 0, 720); g.addColorStop(0, '#25382900'); g.addColorStop(1, '#10201f'); c.fillStyle = g; c.fillRect(0, 525, 1280, 195);
     this.image('column', 130, 700, 450, -1, { alpha: .65 }); this.image('column', 1120, 700, 360, -1, { alpha: .6 });
-    c.save(); c.shadowColor = '#fff4bd55'; c.shadowBlur = 30; this.image('hero', 1020, 717 + Math.sin(t * 1.7) * 2, 415, -1, { rotation: .02 }); c.restore();
+    drawHero(c,this.assets['hero-face'],1060,716,330,-1,0,0,t);
     this.image('amphora', 188, 712, 72, -1, { alpha: .9 });
   }
   render(world, dt) {
@@ -44,7 +46,7 @@ export class Renderer {
     c.save(); if (w.shake > 0) c.translate(Math.sin(t * 173) * w.shake, Math.cos(t * 139) * w.shake * .6);
     c.translate(-cam, 0);
     // Painted props sit behind the functional collision geometry.
-    for (let x = 350; x < w.spec.width; x += 785) if (x > cam - 200 && x < cam + VIEW.w + 200) this.image('column', x, 611, 195 + (Math.floor(x / 785) % 3) * 28, -1, { alpha: .55, filter: w.spec.bg === 'underworld' ? 'brightness(.65) saturate(.7)' : 'brightness(.9)' });
+    if (w.spec.bg !== 'grove') for (let x = 350; x < w.spec.width; x += 785) if (x > cam - 200 && x < cam + VIEW.w + 200) this.image('column', x, 611, 195 + (Math.floor(x / 785) % 3) * 28, -1, { alpha: .55, filter: w.spec.bg === 'underworld' ? 'brightness(.65) saturate(.7)' : 'brightness(.9)' });
     for (const plat of w.platforms) {
       if (plat.x + plat.w < cam - 30 || plat.x > cam + VIEW.w + 30) continue;
       this.platform(plat, w.spec.bg, cam);
@@ -63,10 +65,10 @@ export class Renderer {
     }
     this.exit(w);
     for (const pickup of w.pickups) if (!pickup.taken && pickup.x > cam - 80 && pickup.x < cam + VIEW.w + 80) this.pickup(pickup, t);
-    for (const crate of w.crates) if (crate.health > 0) { this.image('amphora', crate.x, crate.y, 65); }
+    for (const crate of w.crates) if (crate.health > 0) { this.image(w.spec.bg === 'grove' ? 'training-dummy' : 'amphora', crate.x, crate.y, w.spec.bg === 'grove' ? 110 : 65); }
     for (const e of w.enemies) if (e.health > 0 && e.x > cam - 180 && e.x < cam + VIEW.w + 180) this.enemy(e, t);
     if (w.boss?.health > 0) this.boss(w.boss, t);
-    this.hero(p, t);
+    this.hero(p, t, w.state);
     for (const s of w.projectiles) this.projectile(s, t);
     for (const r of w.rings) { c.globalAlpha = r.life * 2; c.strokeStyle = r.color; c.lineWidth = 4; c.beginPath(); c.ellipse(r.x, r.y, r.radius, r.radius * .6, 0, 0, Math.PI * 2); c.stroke(); } c.globalAlpha = 1;
     for (const fx of w.particles) { c.globalAlpha = Math.min(1, fx.life / .25); c.fillStyle = fx.color; c.fillRect(fx.x, fx.y, fx.size, fx.size); } c.globalAlpha = 1;
@@ -82,6 +84,13 @@ export class Renderer {
   platform(plat, theme, cam) {
     const c = this.ctx, x = Math.max(plat.x, cam - 15), right = Math.min(plat.x + plat.w, cam + VIEW.w + 15), width = right - x;
     const dark = theme === 'underworld', ground = plat.ground;
+    if (theme === 'grove' && this.assets['grass-terrain']?.complete) {
+      const tile=this.assets['grass-terrain'], tileW=340, tileH=tileW*tile.naturalHeight/tile.naturalWidth, top=plat.y-tileH*.37;
+      c.save(); c.beginPath(); c.rect(x,top,width,plat.h+tileH*.37); c.clip();
+      const soil=c.createLinearGradient(0,plat.y,0,plat.y+plat.h);soil.addColorStop(0,'#43552a');soil.addColorStop(1,'#152019');c.fillStyle=soil;c.fillRect(x,plat.y,width,plat.h);
+      for(let tx=plat.x;tx<right;tx+=tileW-10) if(tx+tileW>x) c.drawImage(tile,tx,top,tileW,tileH);
+      c.restore(); return;
+    }
     const grad = c.createLinearGradient(0, plat.y, 0, plat.y + plat.h); grad.addColorStop(0, dark ? '#394c60' : '#c0a879'); grad.addColorStop(.07, dark ? '#152b42' : '#8c765a'); grad.addColorStop(1, dark ? '#0c1526' : '#2f3836');
     c.fillStyle = grad; c.fillRect(x, plat.y, width, plat.h);
     c.fillStyle = dark ? '#739ea9' : theme === 'grove' && ground ? '#879b53' : '#dac091'; c.fillRect(x, plat.y, width, ground ? 8 : 5);
@@ -89,17 +98,17 @@ export class Renderer {
     for (let row = 0; row < (ground ? 4 : 1); row++) { const y = plat.y + 16 + row * 42; c.beginPath(); c.moveTo(x, y + 30); c.lineTo(right, y + 30); c.stroke(); for (let xx = Math.floor(x / 130) * 130 + (row % 2) * 65; xx < right; xx += 130) { c.beginPath(); c.moveTo(xx, y - 10); c.lineTo(xx + 4, y + 30); c.stroke(); } }
     if (!ground) { c.fillStyle = '#0d20375c'; c.fillRect(x + 5, plat.y + plat.h, Math.max(0, width - 10), 5); }
   }
-  hero(p, time) {
+  hero(p, time, state = 'playing') {
     const c = this.ctx, active = Math.abs(p.vx) > 40 && p.grounded, bob = active ? Math.sin(p.anim) * 3 : Math.sin(time * 2) * .7;
     c.fillStyle = '#09122148'; c.beginPath(); c.ellipse(p.x, p.grounded ? p.y + 1 : 601, p.grounded ? 27 : 21, p.grounded ? 6 : 4, 0, 0, Math.PI * 2); c.fill();
     const alpha = p.invuln > 0 && Math.floor(time * 14) % 2 === 0 ? .48 : 1;
-    this.image('hero', p.x, p.y + bob + 1, 127, p.dir, { alpha, rotation: p.attack > 0 ? p.dir * -.09 : active ? Math.sin(p.anim) * .035 : !p.grounded ? -.06 : 0, squash: !p.grounded ? 1.045 : active ? 1 + Math.cos(p.anim * 2) * .015 : 1 });
+    drawHero(c,this.assets['hero-face'],p.x,p.y,127,p.dir,heroFrame(p,state),p.anim,time,alpha);
     if (p.charge > .35) { c.globalAlpha = Math.min(.9, p.charge); c.strokeStyle = '#ffdb69'; c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y - 63, 64 + Math.sin(time * 20) * 4, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1; }
     if (p.attack > 0) {
       c.save(); c.translate(p.x, p.y - 65); c.scale(p.dir, 1);
-      c.strokeStyle = p.attackHeavy ? '#fff1b0' : '#fff5d6'; c.shadowBlur = 16; c.shadowColor = '#fff4c2'; c.lineWidth = p.attackHeavy ? 11 : 7; c.lineCap = 'round';
+      c.strokeStyle = p.attackHeavy ? '#fff1b0' : '#fff5d6'; c.shadowBlur = 7; c.shadowColor = '#fff4c2'; c.lineWidth = p.attackHeavy ? 5 : 2; c.lineCap = 'round';
       const phase = 1 - p.attack / (p.attackHeavy ? .38 : .27); c.beginPath(); c.arc(20, 6, p.attackHeavy ? 119 : 98, -.9 + phase * .5, .65 + phase * .3); c.stroke();
-      c.shadowBlur = 0; c.globalAlpha = .25; c.lineWidth = 25; c.stroke(); c.restore();
+      c.shadowBlur = 0; c.globalAlpha = .12; c.lineWidth = 14; c.stroke(); c.restore();
     }
   }
   enemy(e, time) {

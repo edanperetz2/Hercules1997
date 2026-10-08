@@ -1,8 +1,8 @@
 {
   "name": "hercules-heros-journey",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "An original browser fan game inspired by Hercules (1997)",
-  "scripts": { "test": "node --test tests/engine.test.js", "check": "node --check dist/game.js && node --check dist/engine.js && node --check dist/renderer.js && node --check dist/audio.js", "serve": "python3 -m http.server 8000 --directory dist" }
+  "scripts": { "test": "node --test tests/*.test.js", "check": "node --check dist/game.js && node --check dist/engine.js && node --check dist/renderer.js && node --check dist/audio.js && node --check dist/controls.js && node --check dist/animation.js && node --check dist/hero-rig.js", "serve": "python3 -m http.server 8000 --directory dist" }
 }
