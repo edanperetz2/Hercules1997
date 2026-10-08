@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0c182b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hercules">
   <meta name="description" content="An original browser fan game inspired by Hercules (1997). Run, jump, battle mythical monsters, and become a hero.">
   <title>Hercules · A Hero’s Journey</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c182b'/%3E%3Cpath d='M18 3 8 18h8l-2 11 11-16h-8Z' fill='%23f5bf55'/%3E%3C/svg%3E">
@@ -17,6 +20,7 @@
     </header>
 
     <section id="gameShell" class="game-shell" aria-label="Hercules game">
+      <div id="playfield" class="playfield">
       <canvas id="game" width="1280" height="720" tabindex="0" aria-label="Hercules platform game. Move with arrows or A D, jump with space, attack with J, use magic with K, pause with Escape."></canvas>
       <div id="hud" class="hud hidden">
         <div class="hero-status"><div class="hero-name">HERCULES <span id="lives">× 3</span></div><div class="health-track"><div id="healthFill"></div></div></div>
@@ -27,6 +31,9 @@
       </div>
       <div id="bossHud" class="boss-hud hidden"><span id="bossName">THE HYDRA</span><div><i id="bossFill"></i></div><small id="bossHint">Dodge its attack. Strike when it rests.</small></div>
       <div id="toast" class="toast hidden" role="status"></div>
+      </div>
+      <button id="exitExpanded" class="exit-expanded hidden" aria-label="Exit larger view">Exit</button>
+      <div id="rotateHint" class="rotate-hint hidden">Rotate your phone for a larger view. You can also play upright.</div>
 
       <div id="controlsScreen" class="screen controls-screen">
         <div class="controls-panel">
@@ -61,7 +68,7 @@
       <div id="clearScreen" class="screen modal-screen hidden"><div class="panel clear-panel"><div class="eyebrow" id="clearEyebrow">LABOR COMPLETE</div><h2 id="clearTitle">A hero in the making.</h2><p id="clearCopy"></p><div class="results"><div><span id="resultCoins">0</span><small>GOLD</small></div><div><span id="resultLetters">0 / 8</span><small>LETTERS</small></div><div><span id="resultVases">0 / 4</span><small>AMPHORAE</small></div></div><button id="nextButton" class="gold-button">Next chapter</button><button id="clearMenuButton" class="text-button">Back to title</button></div></div>
       <div id="chaptersScreen" class="screen modal-screen hidden"><div class="panel chapter-panel"><div class="panel-top"><div><div class="eyebrow">YOUR JOURNEY</div><h2>Choose a chapter.</h2></div><button class="close-button" id="chaptersClose" aria-label="Close chapters">×</button></div><div id="chapterList" class="chapter-list"></div></div></div>
       <div id="helpScreen" class="screen modal-screen hidden"><div class="panel help-panel"><div class="panel-top"><div><div class="eyebrow">RULE NUMBER ONE</div><h2>Concentrate.</h2></div><button class="close-button" id="helpClose" aria-label="Close controls">×</button></div><div id="helpBindings" class="control-grid"></div><p class="help-note">Collect gold, eight hidden letters, and four amphorae. Blue crystals refill magic; green nectar restores health. Watch a boss's wind-up, dodge, then strike while it recovers. In rush chapters, keep jumping.</p><p class="save-note">Progress and your controls are saved in this browser. Every chapter is available from the title screen.</p><button id="changeControls" class="outline-button">Change controls</button><button id="helpDone" class="gold-button">Got it</button></div></div>
-      <div id="touchControls" class="touch-controls hidden"><div class="touch-move"><button data-control="left" aria-label="Move left">◀</button><button data-control="right" aria-label="Move right">▶</button><button data-control="down" aria-label="Ground slam">▼</button></div><div class="touch-action"><button data-control="magic" class="touch-magic" aria-label="Cast magic">ϟ</button><button data-control="attack" aria-label="Sword attack">J</button><button data-control="jump" class="touch-jump" aria-label="Jump">↑</button></div></div>
+      <div id="touchControls" class="touch-controls hidden" aria-label="Touch game controls"><div class="touch-move"><button data-control="left" aria-label="Move left">◀</button><button data-control="right" aria-label="Move right">▶</button><button data-control="down" aria-label="Ground slam"><span>▼</span><small>SLAM</small></button></div><div class="touch-action"><button data-control="magic" class="touch-magic" aria-label="Cast magic"><span>ϟ</span><small>MAGIC</small></button><button data-control="attack" aria-label="Sword attack"><span>⚔</span><small>SWORD</small></button><button data-control="jump" class="touch-jump" aria-label="Jump"><span>↑</span><small>JUMP</small></button></div></div>
     </section>
     <footer class="game-footer"><span id="footerHint">Ten chapters. One hero.</span><span>Inspired by the 1997 classic <span class="footer-dot">·</span> Original fan game</span></footer>
     <div id="srStatus" class="sr-only" aria-live="polite"></div>
